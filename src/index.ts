@@ -1,26 +1,35 @@
-interface IMessage<T> {
-  __brand: T;
+export interface IMessage<T> {
+  __type: T; // This property is only used to help Typescript with Type inference.
 }
 
-abstract class Query<T> implements IMessage<T> {
-  __brand!: T;
+abstract class MessageBase<TInput, T> implements IMessage<T> {
+  __type!: T;
+  readonly input: TInput;
+
+  constructor(input: TInput) {
+    this.input = Object.freeze(input);
+  }
 }
 
-abstract class Command<T> implements IMessage<T> {
-  __brand!: T;
-}
+export abstract class Query<TInput, T> extends MessageBase<TInput, T> {}
 
-type IQueryHandler<TMessage extends IMessage<T>, T> = (message: TMessage) => Promise<T>; 
+export abstract class Command<TInput, T> extends MessageBase<TInput, T> {}
+
+export abstract class Workflow<TInput, T> extends MessageBase<TInput, T> {}
+
+export abstract class Request<TInput, T> extends MessageBase<TInput, T> {}
+
+export type IQueryHandler<TMessage extends IMessage<T>, T> = (message: TMessage) => Promise<T>; 
 
 export type Constructor<T> = new (...args: any[]) => T;
 
-const handlers: Map<Constructor<any>, IQueryHandler<IMessage<any>, any>> = new Map();
+const handlers: Map<Constructor<IMessage<any>>, IQueryHandler<IMessage<any>, any>> = new Map();
 
-function resetHandlers() {
+export function resetHandlers() {
   handlers.clear();
 }
 
-function registerHandler<TMessage extends IMessage<T>, T>(type: Constructor<TMessage>, handler: IQueryHandler<TMessage, T>): void {
+export function registerHandler<TMessage extends IMessage<T>, T>(type: Constructor<TMessage>, handler: IQueryHandler<TMessage, T>): void {
     
   if(!type || !handler)
     throw new Error("type and handler are both required.");
@@ -33,17 +42,15 @@ function registerHandler<TMessage extends IMessage<T>, T>(type: Constructor<TMes
 
 }
 
-async function run<T>(message: IMessage<T>): Promise<T> {
+export async function run<T>(message: IMessage<T>): Promise<T> {
 
   if(!message)
     throw new Error("message is required.");
 
-  const handler = handlers.get(message.constructor as Constructor<any>);
+  const handler = handlers.get(message.constructor as Constructor<IMessage<any>>);
   if (!handler) 
     throw new Error(`No handler found for message ${message.constructor.name}`);
   
 
   return (await handler(message)) as T;
 }
-
-export { IMessage, Query, Command, IQueryHandler, registerHandler, run, resetHandlers };
