@@ -1,6 +1,8 @@
 
 /**
- * IMessage represents the base interface for messages in the CQS pattern.
+ * IMessage represents the base interface for messages used in CsqCommander. 
+ * It is helpful to use when defining custom handler wrappers but should not be used directly. 
+ * Look at the Query, Command, Workflow, and Request classes instead.
  * The __type property helps with TypeScript type inference.
  */
 export interface IMessage<T> {
@@ -8,7 +10,7 @@ export interface IMessage<T> {
 }
 
 /**
- * MessageBase is an abstract class that provides common functionality for all message types.
+ * MessageBase provides common functionality for all message types.
  * It stores the input data in a frozen state to ensure immutability.
  */
 abstract class MessageBase<TInput, T> implements IMessage<T> {
@@ -21,27 +23,27 @@ abstract class MessageBase<TInput, T> implements IMessage<T> {
 }
 
 /**
- * Query represents an abstract class for query messages, which return data without changing the system state.
+ * Query represents a message that when executed returns a result. Queries should not change the system state.
  */
 export abstract class Query<TInput, T> extends MessageBase<TInput, T> {}
 
 /**
- * Command represents an abstract class for command messages, which change the system state and may return data.
+ * Command represents a messages that mutates / changes the system state and may or may not return a result.
  */
 export abstract class Command<TInput, T> extends MessageBase<TInput, T> {}
 
 /**
- * Workflow represents an abstract class for workflow messages, which may involve a series of commands and/or queries.
+ * Workflow represents a message which when executed can invoke a series of commands and/or queries.
  */
 export abstract class Workflow<TInput, T> extends MessageBase<TInput, T> {}
 
 /**
- * Request represents an abstract class for request messages, which can be used for more general interactions.
+ * Request is meant for more general interactions which do not fit into the other message types.
  */
 export abstract class Request<TInput, T> extends MessageBase<TInput, T> {}
 
 /**
- * RunFunction is a type alias for a function that processes a message and returns a Promise with the result.
+ * RunFunction is a type alias for the run function.
  */
 export type RunFunction = <T>(message: IMessage<T>) => Promise<T>;
 
@@ -55,13 +57,13 @@ export type IQueryHandler<TMessage extends IMessage<T>, T> = (
 ) => Promise<T>;
 
 /**
- * Constructor is a type alias for a constructor function that creates instances of a given type.
+ * Constructor is a type alias.
  */
 export type Constructor<T> = new (...args: any[]) => T;
 
 /**
- * CqsCommander is a class that manages the registration and execution of command and query handlers.
- * It provides a mechanism to run messages and get results through the registered handlers.
+ * CqsCommander manages the registration and execution of command and query handlers.
+ * It provides a mechanism to run messages and get results through registered handlers.
  */
 export class CqsCommander {
   constructor(private maxRecursionDepth: number = 5) {}
@@ -116,21 +118,22 @@ export class CqsCommander {
 }
 
 /**
- * globalCommander is an instance of the CqsCommander class that is used as the default commander.
+ * globalCommander is the default instance of CqsCommander.
  */
 const globalCommander = new CqsCommander();
 
 /**
- * run is a function that processes a message using the globalCommander instance and returns the result as a Promise.
+ * run is a function that processes a message using the default CqsCommander instance and returns the result as a Promise.
+ * The message must be first registered using registerHandler or it will throw an exception.
  */
 export const run = globalCommander.run.bind(globalCommander);
 /**
- * Registers a new handler for a specific message type with the CqsCommander instance.
+ * Registers a new handler for a specific message type with the default CqsCommander instance.
  */
 export const registerHandler = globalCommander.registerHandler.bind(globalCommander);
 
 /**
- * Clears all registered handlers from the global CsqCommander instance.
+ * Clears all registered handlers from the default CqsCommander.
  * It is mainly used for testing purposes.
  */
 export const resetHandlers = globalCommander.resetHandlers.bind(globalCommander);
